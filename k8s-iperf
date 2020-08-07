@@ -3,15 +3,18 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
 kubectl delete -f ${DIR}/k8s-iperf.yaml --cascade	
 function print_usage() {
-    >&2 echo "Usage: `basename $0` <Server Node> [iperf options]"
+    >&2 echo "Usage: `basename $0` <Server Node> <BANDWIDTH> [iperf options]"
 }
 
-if [[ $# < 1 ]]; then 
+if [[ $# < 2 ]]; then 
     print_usage
     exit 1
 fi
 SERVER_NODE=$1; shift
+BW=$1; shift
 
+echo "***************************** $BW for tcp_limit_output_bytes"
+read x
 if [[ ! $(kubectl get node -o name | grep "node/${SERVER_NODE}") ]]; then
     >&2 echo "[Error] Node ${SERVER_NODE} not found"
     print_usage
@@ -20,7 +23,8 @@ fi
 
 echo "[Start] iperf server"
 if [[ ! $(kubectl get pods -l app=iperf-server 2> /dev/null) ]]; then
-    cat ${DIR}/k8s-iperf.yaml | sed -s "s/{NODE}/${SERVER_NODE}/g" | kubectl apply -f -
+    cat ${DIR}/k8s-iperf.yaml | sed -s "s/{NODE}/${SERVER_NODE}/g" | sed -s "s/BANDWIDTH/${BW}/g" > iperf.yaml
+    kubectl apply -f ./iperf.yaml
 elif [[ $(kubectl get pod -l app=iperf-server -o jsonpath='{.items[0].metadata.labels.node}') != "${SERVER_NODE}" ]]; then
     >&2 echo "[Error] Another server had been launched."
     >&2 echo "$(kubectl get pods -l app=iperf-server -o wide)"
@@ -41,19 +45,18 @@ for POD in ${CLIENTS}; do
     done
 done
 
-while true ; do
-	for POD in ${CLIENTS}; do
-	    echo "[Run] iperf-client pod ${POD}"
-	    kubectl exec ${POD} -- iperf -c iperf-server $@ &> /dev/null &
-	done
-	until [[ $(jobs | grep -v Running) != "" ]]; do
-            printf "."
-            sleep 2
-        done
+for POD in ${CLIENTS}; do
+    echo "[Run] iperf-client pod ${POD}"
+    sleep 1
+    kubectl exec ${POD} -- iperf -c iperf-server $@ &> /dev/null &
+done
+until [[ $(jobs | grep -v Running) != "" ]]; do
+    printf "pods still running..."
+    sleep 2
+done
+sleep 2
+printf " done\n"
 
-	printf " done\n"
-
-	echo
-	kubectl logs -l app=iperf-server 
-done 
+echo
+kubectl logs -l app=iperf-server 
 kubectl delete -f ${DIR}/k8s-iperf.yaml --cascade	

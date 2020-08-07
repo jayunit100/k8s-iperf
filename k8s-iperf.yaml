@@ -28,7 +28,7 @@ spec:
       securityContext:
         sysctls:
         - name: net.ipv4.tcp_limit_output_bytes
-          value: "111"
+          value: "BANDWIDTH"
       tolerations:
         - key: node-role.kubernetes.io/master
           operator: Exists
@@ -85,7 +85,7 @@ spec:
       securityContext:
         sysctls:
         - name: net.ipv4.tcp_limit_output_bytes
-          value: "111"
+          value: "BANDWIDTH"
       tolerations:
         - key: node-role.kubernetes.io/master
           operator: Exists
