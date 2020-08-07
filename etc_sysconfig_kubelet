@@ -1,0 +1,1 @@
+KUBELET_EXTRA_ARGS=--allowed-unsafe-sysctls=net.ipv4.tcp_limit_output_bytes

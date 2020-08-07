@@ -25,6 +25,10 @@ spec:
                 operator: In
                 values:
                 - {NODE}
+      securityContext:
+        sysctls:
+        - name: net.ipv4.tcp_limit_output_bytes
+          value: "111"
       tolerations:
         - key: node-role.kubernetes.io/master
           operator: Exists
@@ -78,6 +82,10 @@ spec:
                 operator: NotIn
                 values:
                 - {NODE}
+      securityContext:
+        sysctls:
+        - name: net.ipv4.tcp_limit_output_bytes
+          value: "111"
       tolerations:
         - key: node-role.kubernetes.io/master
           operator: Exists
